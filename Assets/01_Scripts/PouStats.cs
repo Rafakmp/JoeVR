@@ -40,6 +40,11 @@ public class PouStats : MonoBehaviour
 
     public event Action<PouState> OnStateChanged;
 
+    // Se disparan para que otros sistemas (por ejemplo audio) reaccionen
+    // sin tener que leer los stats todos los frames.
+    public event Action<float> OnFed;
+    public event Action OnWentToSleep;
+
     private void Update()
     {
         UpdateStats();
@@ -115,6 +120,8 @@ public class PouStats : MonoBehaviour
     {
         hunger += amount;
         hunger = Mathf.Clamp(hunger, 0f, 100f);
+
+        OnFed?.Invoke(amount);
     }
 
     public void RestoreHealth(float amount)
@@ -148,5 +155,7 @@ public class PouStats : MonoBehaviour
     {
         energy += energyAmount;
         energy = Mathf.Clamp(energy, 0f, 100f);
+
+        OnWentToSleep?.Invoke();
     }
 }
