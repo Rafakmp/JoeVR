@@ -799,6 +799,38 @@ public class PouExpressionController : MonoBehaviour
     public void SetLight(bool isLightOn)
     {
         light = isLightOn;
-    }   
+    }
+    public void PlayEatAnimation(float duration = 1f)
+    {
+        if (eatIndex == -1)
+            return;
 
+        StartCoroutine(EatAnimationCoroutine(duration));
+    }
+
+    private System.Collections.IEnumerator EatAnimationCoroutine(float duration)
+    {
+        float timer = 0f;
+
+        while (timer < duration)
+        {
+            timer += Time.deltaTime;
+
+            float value = Mathf.Sin(
+                (timer / duration) * Mathf.PI
+            ) * 100f;
+
+            faceRenderer.SetBlendShapeWeight(
+                eatIndex,
+                value
+            );
+
+            yield return null;
+        }
+
+        faceRenderer.SetBlendShapeWeight(
+            eatIndex,
+            0f
+        );
+    }
 }
