@@ -35,7 +35,10 @@ public class PouStats : MonoBehaviour
     [SerializeField] private float healthDecayWhenStarving = 1.5f;
     [SerializeField] private float healthDecayWhenExhausted = 1f;
     [SerializeField] private float healthRecovery = 0.25f;
-
+    [Header("Hygiene")]
+    [Range(0f, 100f)] public float cleanliness = 100f;
+    [Min(0f)] public float dirtyAfterSeconds = 300f;
+    [Min(0f)] public float cleanRate = 12f;
     public PouState CurrentState { get; private set; } = PouState.Normal;
 
     public event Action<PouState> OnStateChanged;
@@ -157,5 +160,9 @@ public class PouStats : MonoBehaviour
         energy = Mathf.Clamp(energy, 0f, 100f);
 
         OnWentToSleep?.Invoke();
+    }
+    public void ApplyWaterCleaning(float secondsOfWaterImpact)
+    {
+        cleanliness = Mathf.MoveTowards(cleanliness, 100f, cleanRate * Mathf.Max(0f, secondsOfWaterImpact));
     }
 }
