@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2f603b3929478af4a9360a95498cb9d3, type: 3}
+  m_Name: Food_Kiwi
+  m_EditorClassIdentifier: Assembly-CSharp::FoodData
+  foodName: Kiwi
+  foodItem: {fileID: 5930327898303766433, guid: 804cc6bd0b1ead648bf52db7a3e50363, type: 3}
+  hunger: 10.5
+  health: 2.1
+  energy: 3.6
+  happiness: 5
+  eatDuration: 1
