@@ -16,6 +16,7 @@ public class PouExpressionController : MonoBehaviour
     [SerializeField] private string breathShape = "breath";
     [SerializeField] private string eatShape = "eat";
     [SerializeField] private string sleepShape = "sleep";
+
     // =========================================================
     // MIRAR AL JUGADOR
     // =========================================================
@@ -30,6 +31,25 @@ public class PouExpressionController : MonoBehaviour
     [SerializeField] private float minDistanceToLook = 0.2f;
 
     [SerializeField] private float minAngleToTurn = 2f;
+
+    // =========================================================
+    // CRECIMIENTO POR EDAD
+    // =========================================================
+
+    [Header("Crecimiento por edad")]
+
+    [Tooltip(
+        "Multiplicador de escala a 1 año. " +
+        "1 = mismo tamaño base, 2 = doble, etc."
+    )]
+    [SerializeField] private float minAgeScaleMultiplier = 1f;
+
+    [Tooltip(
+        "Multiplicador de escala a 100 años. " +
+        "Con baseScale = 0.1 y multiplier = 4, " +
+        "Pou llega a 0.4."
+    )]
+    [SerializeField] private float maxAgeScaleMultiplier = 4f;
 
     // =========================================================
     // BLINK
@@ -129,12 +149,21 @@ public class PouExpressionController : MonoBehaviour
     [SerializeField] private float landingBounceDamping = 4f;
 
     // =========================================================
+    // SLEEP
+    // =========================================================
+
+    [Header("Sleep")]
+    [SerializeField] private float sleepLoopSpeed = 60f;
+    [SerializeField] private float sleepEnergyPerSecond = 8f;
+
+    // =========================================================
     // INTERNAL
     // =========================================================
 
     private int blinkIndex = -1;
     private int breathIndex = -1;
     private int eatIndex = -1;
+    private int sleepIndex = -1;
 
     private float nextBlinkTime;
     private float blinkValue;
@@ -144,25 +173,20 @@ public class PouExpressionController : MonoBehaviour
 
     private Vector3 baseScale;
 
+    // Multiplicador aplicado por la edad (1 → 4).
+    private float ageScaleMultiplier = 1f;
+
     private bool isReturningHome;
 
     private float landingBounceTimer = -1f;
 
     private float currentMouthValue;
 
-    private int sleepIndex = -1;
-
     private bool isSleeping = false;
-
-    // Velocidad del loop del blend shape "sleep"
-    [Header("Sleep")]
-    [SerializeField] private float sleepLoopSpeed = 60f;
-    [SerializeField] private float sleepEnergyPerSecond = 8f;
 
     private float sleepBlendValue = 0f;
     private bool sleepGoingUp = true;
 
-    // Se usa para no recalcular la energía con stats.Sleep() cada frame
     private float sleepEnergyTimer = 0f;
 
     // =========================================================
@@ -185,8 +209,29 @@ public class PouExpressionController : MonoBehaviour
 
         FindBlendShapes();
 
-        nextBlinkTime =
-            Time.time + firstBlinkDelay;
+        nextBlinkTime = Time.time + firstBlinkDelay;
+
+        RecalculateAgeScale();
+    }
+
+    // =========================================================
+    // ENABLE / DISABLE (eventos)
+    // =========================================================
+
+    private void OnEnable()
+    {
+        if (pouStats != null)
+        {
+            pouStats.OnAgeChanged += HandleAgeChanged;
+        }
+    }
+
+    private void OnDisable()
+    {
+        if (pouStats != null)
+        {
+            pouStats.OnAgeChanged -= HandleAgeChanged;
+        }
     }
 
     // =========================================================
@@ -200,7 +245,6 @@ public class PouExpressionController : MonoBehaviour
             playerTarget = Camera.main.transform;
         }
 
-        // Mientras duerme, no gira, no parpadea normal, no respira animado
         if (pouGrabAndReturn.isInRoom && !light)
         {
             isSleeping = true;
@@ -210,7 +254,6 @@ public class PouExpressionController : MonoBehaviour
             isSleeping = false;
         }
 
-        
         if (isSleeping)
         {
             UpdateSleep();
@@ -228,27 +271,23 @@ public class PouExpressionController : MonoBehaviour
         UpdateMouthFromAudio();
         UpdateBodyScale(breathWave);
     }
+
+    // =========================================================
+    // SUEÑO
+    // =========================================================
+
     private void UpdateSleep()
     {
-        // -----------------------------------------
-        // Ojos cerrados al 100%
-        // -----------------------------------------
         if (blinkIndex != -1)
         {
             faceRenderer.SetBlendShapeWeight(blinkIndex, 100f);
         }
 
-        // -----------------------------------------
-        // Boca cerrada
-        // -----------------------------------------
         if (eatIndex != -1)
         {
             faceRenderer.SetBlendShapeWeight(eatIndex, 0f);
         }
 
-        // -----------------------------------------
-        // Blend shape "sleep" en loop 0 -> 100 -> 0
-        // -----------------------------------------
         if (sleepIndex != -1)
         {
             if (sleepGoingUp)
@@ -273,14 +312,10 @@ public class PouExpressionController : MonoBehaviour
             faceRenderer.SetBlendShapeWeight(sleepIndex, sleepBlendValue);
         }
 
-        // -----------------------------------------
-        // Recuperar energía mientras duerme
-        // -----------------------------------------
         if (pouStats != null)
         {
             sleepEnergyTimer += Time.deltaTime;
 
-            // Cada 1 segundo le damos energía
             if (sleepEnergyTimer >= 1f)
             {
                 pouStats.Sleep(sleepEnergyPerSecond);
@@ -288,6 +323,7 @@ public class PouExpressionController : MonoBehaviour
             }
         }
     }
+
     // =========================================================
     // API
     // =========================================================
@@ -309,32 +345,22 @@ public class PouExpressionController : MonoBehaviour
     public void SetSleeping(bool sleeping)
     {
         isSleeping = sleeping;
-        
+
         if (sleeping)
         {
-            // Forzar ojos cerrados
             blinkValue = 100f;
             isBlinking = false;
             closingEyes = false;
 
-            // Cerrar boca
             currentMouthValue = 0f;
 
-            // Reiniciar loop del blend shape "sleep"
             sleepBlendValue = 0f;
             sleepGoingUp = true;
-
-            // Apagar luz del cuarto
-          
         }
         else
         {
-            // Al despertar, parpadear normal
             nextBlinkTime = Time.time + 1f;
 
-            
-
-            // Resetear blend shape de dormir
             if (sleepIndex != -1)
             {
                 faceRenderer.SetBlendShapeWeight(sleepIndex, 0f);
@@ -370,26 +396,18 @@ public class PouExpressionController : MonoBehaviour
             return;
         }
 
-        blinkIndex =
-            mesh.GetBlendShapeIndex(blinkShape);
-
-        breathIndex =
-            mesh.GetBlendShapeIndex(breathShape);
-
-        eatIndex =
-            mesh.GetBlendShapeIndex(eatShape);
+        blinkIndex = mesh.GetBlendShapeIndex(blinkShape);
+        breathIndex = mesh.GetBlendShapeIndex(breathShape);
+        eatIndex = mesh.GetBlendShapeIndex(eatShape);
         sleepIndex = mesh.GetBlendShapeIndex(sleepShape);
 
         CheckBlendShape(blinkShape, blinkIndex);
         CheckBlendShape(breathShape, breathIndex);
         CheckBlendShape(eatShape, eatIndex);
-     
         CheckBlendShape(sleepShape, sleepIndex);
     }
 
-    private void CheckBlendShape(
-        string shapeName,
-        int index)
+    private void CheckBlendShape(string shapeName, int index)
     {
         if (index == -1)
         {
@@ -526,8 +544,7 @@ public class PouExpressionController : MonoBehaviour
             return normalBlinkAmount;
         }
 
-        float energy =
-            pouStats.energy;
+        float energy = pouStats.energy;
 
         if (energy >= 60f)
         {
@@ -568,8 +585,7 @@ public class PouExpressionController : MonoBehaviour
     // RESPIRACIÓN
     // =========================================================
 
-    private void UpdateBreathMouth(
-        float breathWave)
+    private void UpdateBreathMouth(float breathWave)
     {
         if (breathIndex == -1)
         {
@@ -603,10 +619,6 @@ public class PouExpressionController : MonoBehaviour
 
         float targetMouth = 0f;
 
-        // -----------------------------------------------------
-        // HACIENDO UN SONIDO
-        // -----------------------------------------------------
-
         if (isMakingSound)
         {
             float pulse =
@@ -615,7 +627,6 @@ public class PouExpressionController : MonoBehaviour
                     talkingPulseSpeed
                 ) + 1f) * 0.5f;
 
-            // Variación entre apertura mínima y máxima.
             targetMouth =
                 Mathf.Lerp(
                     talkingMinimumAmount,
@@ -623,11 +634,6 @@ public class PouExpressionController : MonoBehaviour
                     pulse
                 );
         }
-
-        // -----------------------------------------------------
-        // ESTÁ HAMBRIENTO PERO NO ESTÁ HACIENDO SONIDO
-        // -----------------------------------------------------
-
         else if (pouStats != null &&
                  pouStats.hunger < 50f)
         {
@@ -646,10 +652,6 @@ public class PouExpressionController : MonoBehaviour
                 );
         }
 
-        // -----------------------------------------------------
-        // SUAVIZAR
-        // -----------------------------------------------------
-
         currentMouthValue =
             Mathf.MoveTowards(
                 currentMouthValue,
@@ -665,11 +667,37 @@ public class PouExpressionController : MonoBehaviour
     }
 
     // =========================================================
+    // EDAD (crecimiento)
+    // =========================================================
+
+    private void HandleAgeChanged(float newAge)
+    {
+        RecalculateAgeScale();
+    }
+
+    private void RecalculateAgeScale()
+    {
+        if (pouStats == null)
+        {
+            return;
+        }
+
+        float age01 =
+            pouStats.GetAgeNormalized();
+
+        ageScaleMultiplier =
+            Mathf.Lerp(
+                minAgeScaleMultiplier,
+                maxAgeScaleMultiplier,
+                age01
+            );
+    }
+
+    // =========================================================
     // CUERPO
     // =========================================================
 
-    private void UpdateBodyScale(
-        float breathWave)
+    private void UpdateBodyScale(float breathWave)
     {
         float breathPulse =
             enableBreathing
@@ -735,19 +763,28 @@ public class PouExpressionController : MonoBehaviour
                 horizontalAdjustment
             );
 
+        // -----------------------------------------------------
+        // BASE ESCALADA POR EDAD
+        // baseScale (ej. 0.1) * multiplier (1 → 4)
+        // -----------------------------------------------------
+
+        Vector3 scaledBase =
+            baseScale *
+            ageScaleMultiplier;
+
         Vector3 targetScale =
             new Vector3(
-                baseScale.x *
+                scaledBase.x *
                 (horizontalAdjustment +
                  breathPulse),
 
-                baseScale.y *
+                scaledBase.y *
                 (1f +
                  breathPulse +
                  heightOffset +
                  bounce),
 
-                baseScale.z *
+                scaledBase.z *
                 (horizontalAdjustment +
                  breathPulse)
             );
@@ -796,10 +833,12 @@ public class PouExpressionController : MonoBehaviour
 
         return bounce;
     }
+
     public void SetLight(bool isLightOn)
     {
         light = isLightOn;
     }
+
     public void PlayEatAnimation(float duration = 1f)
     {
         if (eatIndex == -1)

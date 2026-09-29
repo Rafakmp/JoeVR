@@ -5,7 +5,8 @@ public class FoodData : ScriptableObject
 {
     [Header("Información")]
     public string foodName;
-
+    [Header("Item")]
+    public GameObject foodItem;
     [Header("Stats que recupera")]
     [Range(0f, 100f)]
     public float hunger = 20f;

@@ -5,6 +5,10 @@ public class PouUIBars : MonoBehaviour
 {
     [Header("Pou")]
     [SerializeField] private PouStats pouStats;
+    [Header("Barra Age")]
+    [SerializeField] private Image ageFill;
+    [SerializeField] private TMPro.TextMeshProUGUI ageText;
+
 
     [Header("Barra Health")]
     [SerializeField] private Image healthFill;
@@ -17,7 +21,7 @@ public class PouUIBars : MonoBehaviour
 
     [Header("Barra Happiness")]
     [SerializeField] private Image happinessFill;
-
+  
 
     private void Start()
     {
@@ -56,5 +60,11 @@ public class PouUIBars : MonoBehaviour
 
         if (happinessFill != null)
             happinessFill.fillAmount = pouStats.happiness / 100f;
+
+        if (ageFill != null)
+            ageFill.fillAmount = pouStats.AgeProgress / 100f;
+    
+        if (ageText != null)
+            ageText.text = pouStats.Age.ToString();
     }
 }

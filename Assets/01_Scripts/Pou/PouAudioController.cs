@@ -2,25 +2,6 @@ using UnityEngine;
 using UnityEngine.XR.Interaction.Toolkit;
 using UnityEngine.XR.Interaction.Toolkit.Interactables;
 
-/// <summary>
-/// Control de sonidos del Pou.
-///
-/// Categorías:
-/// - Sonidos casuales / Idle
-/// - Sonidos al ser agarrado
-/// - Hambre
-/// - Comer
-/// - Cansancio
-/// - Bostezos
-/// - Ronquidos
-/// - Tristeza
-/// - Enfermedad
-/// - Recuperación de energía
-/// - Recuperación de felicidad
-/// - Recuperación de salud
-///
-/// Todos los sonidos utilizan el mismo AudioSource.
-/// </summary>
 [RequireComponent(typeof(AudioSource))]
 public class PouAudioController : MonoBehaviour
 {
@@ -42,51 +23,37 @@ public class PouAudioController : MonoBehaviour
     [SerializeField]
     private PouStats pouStats;
 
-    [Tooltip("Punto ubicado en la boca de Pou.")]
+    [SerializeField]
+    private PouExpressionController expressionController;
+
     [SerializeField]
     private Transform mouthAudioPoint;
 
-    [Tooltip("AudioSource que reproduce todos los sonidos.")]
     [SerializeField]
     private AudioSource audioSource;
 
-    [Tooltip("XR Grab Interactable del Pou.")]
     [SerializeField]
     private XRGrabInteractable grabInteractable;
 
     // =========================================================
-    // SONIDOS CASUALES / IDLE
+    // IDLE
     // =========================================================
 
     [Header("Sonidos casuales / Idle")]
 
-    [Tooltip(
-        "Sonidos que Pou puede hacer de vez en cuando " +
-        "y también puede decir al ser agarrado."
-    )]
     [SerializeField]
     private AudioClip[] idleSounds;
 
-    [Tooltip("Tiempo mínimo entre sonidos casuales.")]
     [SerializeField]
     private float idleMinInterval = 15f;
 
-    [Tooltip("Tiempo máximo entre sonidos casuales.")]
     [SerializeField]
     private float idleMaxInterval = 30f;
 
-    [Tooltip(
-        "Probabilidad de que haga un sonido casual " +
-        "cuando llegue el momento."
-    )]
     [Range(0f, 1f)]
     [SerializeField]
     private float idleChance = 0.75f;
 
-    [Tooltip(
-        "Desactiva los sonidos casuales cuando las necesidades " +
-        "son demasiado bajas."
-    )]
     [SerializeField]
     private bool disableIdleWhenNeedsAreCritical = true;
 
@@ -154,9 +121,6 @@ public class PouAudioController : MonoBehaviour
     private AudioClip[] snoreSounds;
 
     [SerializeField]
-    private float asleepEnergyThreshold = 8f;
-
-    [SerializeField]
     private Vector2 snoreInterval =
         new Vector2(4f, 9f);
 
@@ -198,16 +162,9 @@ public class PouAudioController : MonoBehaviour
 
     [Header("Recuperación de energía")]
 
-    [Tooltip(
-        "Sonidos cuando la energía de Pou aumenta."
-    )]
     [SerializeField]
     private AudioClip[] energyRecoverySounds;
 
-    [Tooltip(
-        "Cantidad de energía que debe recuperar " +
-        "antes de reproducir un sonido."
-    )]
     [SerializeField]
     private float energyRecoveryStep = 8f;
 
@@ -221,16 +178,9 @@ public class PouAudioController : MonoBehaviour
 
     [Header("Recuperación de felicidad")]
 
-    [Tooltip(
-        "Sonidos cuando la felicidad de Pou aumenta."
-    )]
     [SerializeField]
     private AudioClip[] happinessRecoverySounds;
 
-    [Tooltip(
-        "Cantidad de felicidad que debe aumentar " +
-        "antes de reproducir un sonido."
-    )]
     [SerializeField]
     private float happinessRecoveryStep = 5f;
 
@@ -244,22 +194,31 @@ public class PouAudioController : MonoBehaviour
 
     [Header("Recuperación de salud")]
 
-    [Tooltip(
-        "Sonidos cuando la salud de Pou aumenta."
-    )]
     [SerializeField]
     private AudioClip[] healthRecoverySounds;
 
-    [Tooltip(
-        "Cantidad de salud que debe recuperar " +
-        "antes de reproducir un sonido."
-    )]
     [SerializeField]
     private float healthRecoveryStep = 5f;
 
     [SerializeField]
     private Vector2 healthRecoveryInterval =
         new Vector2(10f, 20f);
+
+    // =========================================================
+    // SUBIDA DE EDAD
+    // =========================================================
+
+    [Header("Subida de edad")]
+
+    [SerializeField]
+    private AudioClip[] ageUpSounds;
+
+    [Tooltip(
+        "Si está activo, el sonido de subir de edad " +
+        "se reproduce aunque ya haya otro sonando."
+    )]
+    [SerializeField]
+    private bool forceAgeUpSound = true;
 
     // =========================================================
     // AUDIO
@@ -280,17 +239,29 @@ public class PouAudioController : MonoBehaviour
     [SerializeField]
     private float basePitch = 1f;
 
-    [Tooltip(
-        "Variación aleatoria de tono."
-    )]
     [SerializeField]
     private float pitchVariation = 0.05f;
 
-    [Tooltip(
-        "Evita que varios sonidos se reproduzcan al mismo tiempo."
-    )]
     [SerializeField]
     private bool preventOverlappingSounds = true;
+
+    // =========================================================
+    // VOZ POR EDAD
+    // =========================================================
+
+    [Header("Voz por edad")]
+
+    [Tooltip(
+        "Pitch de Pou cuando tiene 1 año."
+    )]
+    [SerializeField]
+    private float youngestVoicePitch = 1.35f;
+
+    [Tooltip(
+        "Pitch de Pou cuando tiene 100 años."
+    )]
+    [SerializeField]
+    private float oldestVoicePitch = 0.80f;
 
     // =========================================================
     // AGARRAR
@@ -301,32 +272,42 @@ public class PouAudioController : MonoBehaviour
     [SerializeField]
     private bool playIdleSoundWhenGrabbed = true;
 
-    [Tooltip(
-        "Tiempo mínimo entre sonidos causados por agarrar a Pou."
-    )]
     [SerializeField]
     private float grabCooldown = 2f;
 
-    private float lastGrabSoundTime = -Mathf.Infinity;
+    private float lastGrabSoundTime =
+        -Mathf.Infinity;
 
     // =========================================================
     // TIEMPOS
     // =========================================================
 
     private float nextIdleTime;
+
     private float nextComplaintTime;
+
     private float nextSnoreTime;
+
     private float nextYawnTime;
 
     private float nextEnergyRecoveryTime;
+
     private float nextHappinessRecoveryTime;
+
     private float nextHealthRecoveryTime;
+
+    // =========================================================
+    // SUEÑO
+    // =========================================================
+
+    private bool wasSleeping = false;
 
     // =========================================================
     // ENERGÍA
     // =========================================================
 
     private float previousEnergy;
+
     private float accumulatedEnergyRecovery;
 
     // =========================================================
@@ -334,6 +315,7 @@ public class PouAudioController : MonoBehaviour
     // =========================================================
 
     private float previousHappiness;
+
     private float accumulatedHappinessRecovery;
 
     // =========================================================
@@ -341,6 +323,7 @@ public class PouAudioController : MonoBehaviour
     // =========================================================
 
     private float previousHealth;
+
     private float accumulatedHealthRecovery;
 
     // =========================================================
@@ -359,6 +342,12 @@ public class PouAudioController : MonoBehaviour
         {
             pouStats =
                 GetComponent<PouStats>();
+        }
+
+        if (expressionController == null)
+        {
+            expressionController =
+                GetComponent<PouExpressionController>();
         }
 
         if (audioSource == null)
@@ -399,19 +388,22 @@ public class PouAudioController : MonoBehaviour
     {
         if (pouStats != null)
         {
-            pouStats.OnFed += HandleFed;
-
-            pouStats.OnWentToSleep +=
-                HandleWentToSleep;
+            pouStats.OnFed +=
+                HandleFed;
 
             pouStats.OnStateChanged +=
                 HandleStateChanged;
+
+            pouStats.OnAgeIncreased +=
+                HandleAgeIncreased;
         }
 
         if (grabInteractable != null)
         {
             grabInteractable.selectEntered
-                .AddListener(OnPouGrabbed);
+                .AddListener(
+                    OnPouGrabbed
+                );
         }
     }
 
@@ -423,19 +415,22 @@ public class PouAudioController : MonoBehaviour
     {
         if (pouStats != null)
         {
-            pouStats.OnFed -= HandleFed;
-
-            pouStats.OnWentToSleep -=
-                HandleWentToSleep;
+            pouStats.OnFed -=
+                HandleFed;
 
             pouStats.OnStateChanged -=
                 HandleStateChanged;
+
+            pouStats.OnAgeIncreased -=
+                HandleAgeIncreased;
         }
 
         if (grabInteractable != null)
         {
             grabInteractable.selectEntered
-                .RemoveListener(OnPouGrabbed);
+                .RemoveListener(
+                    OnPouGrabbed
+                );
         }
     }
 
@@ -490,9 +485,9 @@ public class PouAudioController : MonoBehaviour
             return;
         }
 
-        // -----------------------------------------------------
+        // =====================================================
         // RECUPERACIONES
-        // -----------------------------------------------------
+        // =====================================================
 
         UpdateEnergyRecoverySounds();
 
@@ -500,18 +495,49 @@ public class PouAudioController : MonoBehaviour
 
         UpdateHealthRecoverySounds();
 
-        // -----------------------------------------------------
-        // RONQUIDOS
-        // -----------------------------------------------------
+        // =====================================================
+        // DORMIR
+        // =====================================================
 
-        if (pouStats.energy <=
-            asleepEnergyThreshold)
+        bool isSleeping =
+            expressionController != null &&
+            expressionController.IsSleeping;
+
+        if (isSleeping)
         {
+            // ---------------------------------------------
+            // ACABA DE DORMIRSE
+            // ---------------------------------------------
+
+            if (!wasSleeping)
+            {
+                if (!preventOverlappingSounds ||
+                    !audioSource.isPlaying)
+                {
+                    PlayRandom(
+                        snoreSounds
+                    );
+                }
+
+                nextSnoreTime =
+                    Time.time +
+                    Random.Range(
+                        snoreInterval.x,
+                        snoreInterval.y
+                    );
+            }
+
+            // ---------------------------------------------
+            // YA ESTÁ DORMIDO
+            // ---------------------------------------------
+
             TryPlay(
                 snoreSounds,
                 snoreInterval,
                 ref nextSnoreTime
             );
+
+            wasSleeping = true;
 
             ScheduleNextIdle();
 
@@ -519,15 +545,21 @@ public class PouAudioController : MonoBehaviour
         }
 
         // -----------------------------------------------------
-        // QUEJAS
+        // DESPERTÓ
         // -----------------------------------------------------
+
+        wasSleeping = false;
+
+        // =====================================================
+        // QUEJAS
+        // =====================================================
 
         bool madeComplaint =
             TryPlayContextualComplaint();
 
-        // -----------------------------------------------------
+        // =====================================================
         // BOSTEZOS
-        // -----------------------------------------------------
+        // =====================================================
 
         if (!madeComplaint &&
             pouStats.energy <= 35f)
@@ -539,15 +571,15 @@ public class PouAudioController : MonoBehaviour
             );
         }
 
-        // -----------------------------------------------------
-        // SONIDOS IDLE
-        // -----------------------------------------------------
+        // =====================================================
+        // IDLE
+        // =====================================================
 
         TryPlayIdle();
     }
 
     // =========================================================
-    // CONFIGURACIÓN DEL AUDIO
+    // SETUP AUDIO
     // =========================================================
 
     private void SetupAudioSource()
@@ -557,9 +589,9 @@ public class PouAudioController : MonoBehaviour
             return;
         }
 
-        // Mover el AudioSource al punto de la boca.
         if (mouthAudioPoint != null &&
-            audioSource.transform != mouthAudioPoint)
+            audioSource.transform !=
+            mouthAudioPoint)
         {
             audioSource.transform.SetParent(
                 mouthAudioPoint,
@@ -571,7 +603,6 @@ public class PouAudioController : MonoBehaviour
 
         audioSource.loop = false;
 
-        // Audio 3D.
         audioSource.spatialBlend = 1f;
 
         audioSource.spatialize = true;
@@ -595,7 +626,7 @@ public class PouAudioController : MonoBehaviour
     }
 
     // =========================================================
-    // AL AGARRAR
+    // GRAB
     // =========================================================
 
     private void OnPouGrabbed(
@@ -622,8 +653,6 @@ public class PouAudioController : MonoBehaviour
         lastGrabSoundTime =
             Time.time;
 
-        // Al agarrarlo, utiliza uno de los mismos
-        // sonidos casuales.
         PlayRandomForced(
             idleSounds
         );
@@ -632,7 +661,7 @@ public class PouAudioController : MonoBehaviour
     }
 
     // =========================================================
-    // SONIDOS IDLE
+    // IDLE
     // =========================================================
 
     private void TryPlayIdle()
@@ -685,7 +714,7 @@ public class PouAudioController : MonoBehaviour
     }
 
     // =========================================================
-    // NECESIDADES CRÍTICAS
+    // CRITICAL
     // =========================================================
 
     private bool HasCriticalNeed()
@@ -714,7 +743,7 @@ public class PouAudioController : MonoBehaviour
     }
 
     // =========================================================
-    // QUEJAS CONTEXTUALES
+    // COMPLAINT
     // =========================================================
 
     private bool TryPlayContextualComplaint()
@@ -764,7 +793,9 @@ public class PouAudioController : MonoBehaviour
             return false;
         }
 
-        PlayRandom(clips);
+        PlayRandom(
+            clips
+        );
 
         ScheduleNextComplaint(
             interval
@@ -776,7 +807,7 @@ public class PouAudioController : MonoBehaviour
     }
 
     // =========================================================
-    // DECIDIR QUEJA
+    // DETERMINE COMPLAINT
     // =========================================================
 
     private ComplaintType DetermineComplaintType()
@@ -867,7 +898,7 @@ public class PouAudioController : MonoBehaviour
     }
 
     // =========================================================
-    // INTENSIDAD
+    // URGENCY
     // =========================================================
 
     private float CalculateUrgency(
@@ -915,7 +946,7 @@ public class PouAudioController : MonoBehaviour
     }
 
     // =========================================================
-    // INTERVALOS
+    // INTERVALS
     // =========================================================
 
     private Vector2 GetIntervalForComplaint(
@@ -936,12 +967,15 @@ public class PouAudioController : MonoBehaviour
                 return sickInterval;
 
             default:
-                return new Vector2(8f, 15f);
+                return new Vector2(
+                    8f,
+                    15f
+                );
         }
     }
 
     // =========================================================
-    // PRÓXIMA QUEJA
+    // NEXT COMPLAINT
     // =========================================================
 
     private void ScheduleNextComplaint(
@@ -956,7 +990,7 @@ public class PouAudioController : MonoBehaviour
     }
 
     // =========================================================
-    // RECUPERACIÓN DE ENERGÍA
+    // ENERGY RECOVERY
     // =========================================================
 
     private void UpdateEnergyRecoverySounds()
@@ -999,8 +1033,8 @@ public class PouAudioController : MonoBehaviour
             return;
         }
 
-        if (pouStats.energy >
-            asleepEnergyThreshold)
+        if (expressionController == null ||
+            !expressionController.IsSleeping)
         {
             if (!preventOverlappingSounds ||
                 !audioSource.isPlaying)
@@ -1029,7 +1063,7 @@ public class PouAudioController : MonoBehaviour
     }
 
     // =========================================================
-    // RECUPERACIÓN DE FELICIDAD
+    // HAPPINESS RECOVERY
     // =========================================================
 
     private void UpdateHappinessRecoverySounds()
@@ -1098,7 +1132,7 @@ public class PouAudioController : MonoBehaviour
     }
 
     // =========================================================
-    // RECUPERACIÓN DE SALUD
+    // HEALTH RECOVERY
     // =========================================================
 
     private void UpdateHealthRecoverySounds()
@@ -1170,7 +1204,8 @@ public class PouAudioController : MonoBehaviour
     // COMER
     // =========================================================
 
-    private void HandleFed(float amount)
+    private void HandleFed(
+        float amount)
     {
         if (!preventOverlappingSounds ||
             !audioSource.isPlaying)
@@ -1200,31 +1235,40 @@ public class PouAudioController : MonoBehaviour
     }
 
     // =========================================================
-    // DORMIR
+    // SUBIR DE EDAD
     // =========================================================
 
-    private void HandleWentToSleep()
+    private void HandleAgeIncreased(
+        float newAge)
     {
-        if (!preventOverlappingSounds ||
-            !audioSource.isPlaying)
+        if (ageUpSounds == null ||
+            ageUpSounds.Length == 0)
         {
-            PlayRandom(
-                yawnSounds
-            );
+            return;
         }
 
-        nextComplaintTime =
-            Time.time +
-            Random.Range(
-                6f,
-                10f
+        if (forceAgeUpSound)
+        {
+            PlayRandomForced(
+                ageUpSounds
             );
+        }
+        else
+        {
+            if (!preventOverlappingSounds ||
+                !audioSource.isPlaying)
+            {
+                PlayRandom(
+                    ageUpSounds
+                );
+            }
+        }
 
         ScheduleNextIdle();
     }
 
     // =========================================================
-    // CAMBIO DE ESTADO
+    // STATE
     // =========================================================
 
     private void HandleStateChanged(
@@ -1257,7 +1301,7 @@ public class PouAudioController : MonoBehaviour
     }
 
     // =========================================================
-    // REPRODUCCIÓN POR INTERVALO
+    // TRY PLAY
     // =========================================================
 
     private void TryPlay(
@@ -1271,8 +1315,7 @@ public class PouAudioController : MonoBehaviour
             return;
         }
 
-        if (Time.time <
-            nextTime)
+        if (Time.time < nextTime)
         {
             return;
         }
@@ -1283,7 +1326,9 @@ public class PouAudioController : MonoBehaviour
             return;
         }
 
-        PlayRandom(clips);
+        PlayRandom(
+            clips
+        );
 
         nextTime =
             Time.time +
@@ -1296,7 +1341,33 @@ public class PouAudioController : MonoBehaviour
     }
 
     // =========================================================
-    // SONIDO ALEATORIO
+    // AGE PITCH
+    // =========================================================
+
+    private float GetAgePitch()
+    {
+        if (pouStats == null)
+        {
+            return basePitch;
+        }
+
+        float age01 =
+            pouStats.GetAgeNormalized();
+
+        float agePitch =
+            Mathf.Lerp(
+                youngestVoicePitch,
+                oldestVoicePitch,
+                age01
+            );
+
+        return
+            basePitch *
+            agePitch;
+    }
+
+    // =========================================================
+    // RANDOM SOUND
     // =========================================================
 
     private void PlayRandom(
@@ -1322,24 +1393,27 @@ public class PouAudioController : MonoBehaviour
             return;
         }
 
+        float agePitch =
+            GetAgePitch();
+
         audioSource.pitch =
-            basePitch +
-            Random.Range(
-                -pitchVariation,
-                pitchVariation
+            Mathf.Max(
+                0.1f,
+                agePitch +
+                Random.Range(
+                    -pitchVariation,
+                    pitchVariation
+                )
             );
 
         audioSource.PlayOneShot(
             clip,
             masterVolume
         );
-
-        audioSource.pitch =
-            basePitch;
     }
 
     // =========================================================
-    // SONIDO FORZADO
+    // RANDOM FORCED
     // =========================================================
 
     private void PlayRandomForced(
@@ -1365,30 +1439,32 @@ public class PouAudioController : MonoBehaviour
             return;
         }
 
-        // El sonido al agarrar tiene prioridad.
         if (audioSource.isPlaying)
         {
             audioSource.Stop();
         }
 
+        float agePitch =
+            GetAgePitch();
+
         audioSource.pitch =
-            basePitch +
-            Random.Range(
-                -pitchVariation,
-                pitchVariation
+            Mathf.Max(
+                0.1f,
+                agePitch +
+                Random.Range(
+                    -pitchVariation,
+                    pitchVariation
+                )
             );
 
         audioSource.PlayOneShot(
             clip,
             masterVolume
         );
-
-        audioSource.pitch =
-            basePitch;
     }
 
     // =========================================================
-    // API PÚBLICA
+    // API
     // =========================================================
 
     public void PlayRecoverySound()

@@ -13,8 +13,9 @@ MonoBehaviour:
   m_Name: Food_Manzana
   m_EditorClassIdentifier: Assembly-CSharp::FoodData
   foodName: Manzana
-  hunger: 25
+  foodItem: {fileID: 4879961194700737524, guid: 97302fb6c88cbb042afe9c7dec1c3a44, type: 3}
+  hunger: 16.5
   health: 3
-  energy: 8
+  energy: 3.9
   happiness: 8
-  eatDuration: 1
+  eatDuration: 2

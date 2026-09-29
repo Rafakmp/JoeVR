@@ -13,8 +13,9 @@ MonoBehaviour:
   m_Name: Food_Kiwi
   m_EditorClassIdentifier: Assembly-CSharp::FoodData
   foodName: Kiwi
-  hunger: 20
-  health: 0
-  energy: 10
+  foodItem: {fileID: 5930327898303766433, guid: 804cc6bd0b1ead648bf52db7a3e50363, type: 3}
+  hunger: 10.5
+  health: 2.1
+  energy: 3.6
   happiness: 5
   eatDuration: 1
