@@ -67,6 +67,11 @@ public class PouStats : MonoBehaviour
     [Range(0f, 100f)]
     public float cleanliness = 100f;
 
+   
+private float dirtyTimer = 0f;
+
+    [Range(0f, 100f)]
+    public float dirtyAmount = 10f;
     [Min(0f)]
     public float dirtyAfterSeconds = 300f;
 
@@ -107,10 +112,21 @@ public class PouStats : MonoBehaviour
     {
         float multiplier = Time.deltaTime / 60f;
 
+        // Necesidades
         hunger -= hungerDecay * multiplier;
         energy -= energyDecay * multiplier;
         happiness -= happinessDecay * multiplier;
 
+        // Ensuciar automáticamente
+        dirtyTimer += Time.deltaTime;
+
+        if (dirtyTimer >= dirtyAfterSeconds)
+        {
+            cleanliness -= dirtyAmount;
+            dirtyTimer = 0f;
+        }
+
+        // Salud
         if (hunger <= 15f)
         {
             health -= healthDecayWhenStarving * multiplier;
@@ -122,12 +138,19 @@ public class PouStats : MonoBehaviour
         }
 
         if (hunger > 60f &&
-            energy > 40f &&
-            happiness > 40f)
+        energy > 40f &&
+        happiness > 40f)
         {
             health += healthRecovery * multiplier;
         }
 
+        // Penalización por suciedad
+        if (cleanliness <= 20f)
+        {
+            health -= 0.5f * multiplier;
+        }
+
+        // Clamps
         hunger = Mathf.Clamp(hunger, 0f, 100f);
         health = Mathf.Clamp(health, 0f, 100f);
         energy = Mathf.Clamp(energy, 0f, 100f);
